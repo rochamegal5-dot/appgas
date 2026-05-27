@@ -1,10 +1,10 @@
-<meta charset="UTF-8"><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>App Gas - Repartidor</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -68,11 +68,8 @@
                         <option value="">-- Tipo --</option>
                     </select>
                     
-                    <!-- BÚSQUEDA DE COMERCIO / AUTO-DETECCIÓN -->
                     <div id="seccionClienteComercio" style="display: none;">
-                        <div id="alertaGeocerca" style="display: none;" class="p-2 bg-green-100 border border-green-400 text-green-800 rounded-lg text-xs font-bold text-center mb-2">
-                            📍 Venta automática en este local
-                        </div>
+                        <div id="alertaGeocerca" style="display: none;" class="p-2 bg-green-100 border border-green-400 text-green-800 rounded-lg text-xs font-bold text-center mb-2">📍 Venta automática en este local</div>
                         <input type="text" id="inputClienteNombre" list="lista-comercios" placeholder="Escriba nombre del comercio..." class="block w-full px-3 py-3 border-2 border-purple-300 rounded-lg text-sm font-bold bg-purple-50 cursor-text" oninput="seleccionarCliente()">
                         <datalist id="lista-comercios"></datalist>
                         <input type="hidden" id="inputClienteId" value="">
@@ -108,9 +105,7 @@
 
         <!-- MÓDULO 2: CAJA Y CIERRE -->
         <div id="moduloCierre" style="display: none;" class="p-4 space-y-4">
-            <button onclick="mostrarPantallaVentas()" class="w-full bg-blue-800 text-white py-3 rounded-xl font-bold text-lg cursor-pointer mb-2 flex items-center justify-center">
-                <span class="mr-2">⬅</span> Volver a Ventas
-            </button>
+            <button onclick="mostrarPantallaVentas()" class="w-full bg-blue-800 text-white py-3 rounded-xl font-bold text-lg cursor-pointer mb-2 flex items-center justify-center"><span class="mr-2">⬅</span> Volver a Ventas</button>
             <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-orange-500">
                 <h3 class="font-bold text-gray-800 mb-3 text-lg">Cierre y Entrega del Día</h3>
                 <div class="bg-orange-50 p-4 rounded-xl mb-3 text-sm space-y-2">
@@ -132,14 +127,6 @@
             </div>
         </div>
     </div>
-    <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js');
-    });
-  }
-   </script>
-    
 
     <script>
         var SUPABASE_URL = 'https://wpsmcinqzudnscujkjpq.supabase.co';
@@ -151,21 +138,18 @@
         var stockActual = {}; 
         var stockVacias = {}; 
         var ultimoCierreParcial = null;
-        
         var PRODUCTOS_DB = [];      
         var LISTA_PRECIOS_DB = [];  
         var COMERCIOS_DB = [];
 
-        // --- VARIABLES DE RUTA Y GPS ---
         var ubicacionActual = { clienteId: null, clienteNombre: null, geocercaId: null };
         var llegadaGeocerca = null;
-        var ventaEnGeocerca = false; // Bandera para saber si vendió en la parada actual
+        var ventaEnGeocerca = false; 
+        var notificadosHoy = []; 
 
-        // --- NAV INTERNA ---
         function mostrarPantallaCierre() { document.getElementById('moduloVentas').style.display = 'none'; document.getElementById('moduloCierre').style.display = 'block'; actualizarCaja(); }
         function mostrarPantallaVentas() { document.getElementById('moduloCierre').style.display = 'none'; document.getElementById('moduloVentas').style.display = 'block'; }
 
-        // --- INICIALIZACIÓN ---
         async function cargarRepartidores() {
             var select = document.getElementById('selectRepartidor');
             var resultado = await supabase.from('repartidores').select('*').order('nombre');
@@ -206,30 +190,14 @@
             var seccionComercio = document.getElementById('seccionClienteComercio');
             var alertaGeo = document.getElementById('alertaGeocerca');
             var inputNombre = document.getElementById('inputClienteNombre');
-            
             var esComercio = tipoSeleccionado.toLowerCase().includes('comercio');
             if (esComercio) {
                 seccionComercio.style.display = 'block';
                 document.getElementById('inputClienteId').value = '';
-                
-                // Llenar datalist
                 var datalist = document.getElementById('lista-comercios'); datalist.innerHTML = '';
                 COMERCIOS_DB.forEach(function(c) { var opt = document.createElement('option'); opt.value = c.nombre; datalist.appendChild(opt); });
-
-                // Si estamos parados en una geocerca, forzar la venta a ese local
-                if (ubicacionActual.clienteId) {
-                    inputNombre.value = ubicacionActual.clienteNombre;
-                    inputNombre.readOnly = true; // No lo puede cambiar
-                    document.getElementById('inputClienteId').value = ubicacionActual.clienteId;
-                    alertaGeo.style.display = 'block';
-                } else {
-                    inputNombre.value = '';
-                    inputNombre.readOnly = false;
-                    alertaGeo.style.display = 'none';
-                }
-            } else {
-                seccionComercio.style.display = 'none'; alertaGeo.style.display = 'none';
-            }
+                if (ubicacionActual.clienteId) { inputNombre.value = ubicacionActual.clienteNombre; inputNombre.readOnly = true; document.getElementById('inputClienteId').value = ubicacionActual.clienteId; alertaGeo.style.display = 'block'; } else { inputNombre.value = ''; inputNombre.readOnly = false; alertaGeo.style.display = 'none'; }
+            } else { seccionComercio.style.display = 'none'; alertaGeo.style.display = 'none'; }
             calcularPrecioVenta();
         }
 
@@ -239,7 +207,6 @@
             if (encontrado) { document.getElementById('inputClienteId').value = encontrado.id; } else { document.getElementById('inputClienteId').value = ''; }
         }
 
-        // --- SESIÓN Y JORNADA ---
         async function iniciarSesion() {
             var repId = document.getElementById('selectRepartidor').value; if (!repId) { alert('Selecciona tu nombre.'); return; }
             var resultado = await supabase.from('repartidores').select('*').eq('id', repId).single(); if (resultado.error) { alert("ERROR LOGIN"); return; }
@@ -277,124 +244,6 @@
             if (res.error) { alert("ERROR AL CERRAR"); return; } alert('¡Jornada finalizada!'); location.reload();
         }
 
-        // --- STOCK Y RECARGAS ---
         function actualizarUIStock() {
             var contenedor = document.getElementById('stockGridUI'); contenedor.innerHTML = '';
-            for (var tp in stockActual) { var vacias = stockVacias[tp] || 0; contenedor.innerHTML += `<div class="bg-white p-2 rounded-lg shadow text-center"><p class="font-black text-indigo-900 text-xs mb-1">${tp.replace('garrafa_', '')} kg</p><p class="text-green-700 font-black text-xl">${stockActual[tp]}</p><p class="text-green-500 text-[10px] font-bold">Llenas</p><hr class="my-1 border-gray-200"><p class="text-gray-500 font-black text-xl">${vacias}</p><p class="text-gray-400 text-[10px] font-bold">Vacías</p></div>`; }
-        }
-        function abrirRecarga() { var sec = document.getElementById('seccionRecarga'); sec.style.display = (sec.style.display === 'block') ? 'none' : 'block'; }
-
-        async function registrarRecarga() {
-            var tiposParaStock = ['garrafa_11', 'garrafa_13', 'garrafa_45']; var hayRecarga = false;
-            for (var i = 0; i < tiposParaStock.length; i++) {
-                var tp = tiposParaStock[i]; var inputLlenas = document.getElementById('recarga_llenas_' + tp); var inputVacias = document.getElementById('recarga_vacias_' + tp);
-                if(inputLlenas && inputVacias) { var recLlenas = parseInt(inputLlenas.value) || 0; var devVacias = parseInt(inputVacias.value) || 0;
-                    if (recLlenas > 0 || devVacias > 0) { hayRecarga = true; if(recLlenas > 0) { await supabase.from('recargas').insert([{ repartidor_id: repartidorActual.id, tipo_garrafa: tp, cantidad: recLlenas }]); stockActual[tp] += recLlenas; } if(devVacias > 0) { stockVacias[tp] = Math.max(0, (stockVacias[tp] || 0) - devVacias); } inputLlenas.value = 0; inputVacias.value = 0; } }
-            }
-            if (!hayRecarga) { alert('Ingresa cantidades.'); return; } actualizarUIStock(); document.getElementById('seccionRecarga').style.display = 'none'; alert('✅ Stock actualizado');
-        }
-
-        // --- VENTAS ---
-        function calcularPrecioVenta() { var tipoProducto = document.getElementById('ventaTipoGarrafa').value; var inputCantidad = document.getElementById('ventaCantidad'); var cantidadRaw = parseInt(inputCantidad.value); var cantidadCalculo = isNaN(cantidadRaw) || cantidadRaw < 1 ? 1 : cantidadRaw; var esCambio = document.getElementById('ventaEsCambio').checked; var total = 0, precioBase = 0, flete = 0; if (esCambio) { total = 0; } else { var productoObj = PRODUCTOS_DB.find(function(p) { return p.tipo_producto === tipoProducto; }); if (productoObj) { precioBase = (productoObj.precio_venta_base || 0) * cantidadCalculo; flete = 0; total = precioBase + flete; } } document.getElementById('ventaTotalPantalla').textContent = "$" + total.toLocaleString('es-UY'); document.getElementById('ventaPrecioBaseOculto').value = precioBase; document.getElementById('ventaFleteOculto').value = flete; document.getElementById('ventaTotalOculto').value = total; }
-        function arreglarCantidad() { var inputCantidad = document.getElementById('ventaCantidad'); if (isNaN(parseInt(inputCantidad.value)) || parseInt(inputCantidad.value) < 1) { inputCantidad.value = 1; calcularPrecioVenta(); } 
-                                     
-        async function registrarVenta() {
-            var tipoProducto = document.getElementById('ventaTipoGarrafa').value; var cantidad = parseInt(document.getElementById('ventaCantidad').value); var esCambio = document.getElementById('ventaEsCambio').checked; var tipoCliente = document.getElementById('ventaTipoCliente').value; var esComercio = tipoCliente.toLowerCase().includes('comercio'); var clienteId = document.getElementById('inputClienteId').value;
-            if (!tipoProducto) { alert("Selecciona un producto."); return; }
-            if (esComercio && !clienteId) { alert("Seleccione un comercio válido de la lista."); return; }
-            if (stockActual[tipoProducto] === undefined || cantidad > stockActual[tipoProducto]) { alert("No tienes suficiente stock."); return; }
-
-                        var venta = {
-                repartidor_id: repartidorActual.id,
-                tipo_venta: 'reparto', // 🔥 NUEVO: Para que la web lo meta en Caja Repartidores
-                tipo_cliente: document.getElementById("ventaTipoCliente").value,
-                tipo_garrafa: tipoProducto,
-                cantidad: cantidad,
-                es_cambio: esCambio,
-                precio_base: parseFloat(document.getElementById("ventaPrecioBaseOculto").value),
-                flete: parseFloat(document.getElementById("ventaFleteOculto").value),
-                total: parseFloat(document.getElementById("ventaTotalOculto").value),
-                modalidad_pago: document.getElementById("ventaModalidad").value,
-                forma_pago: document.getElementById("ventaModalidad").value, // 🔥 NUEVO: La web usa este nombre
-                fecha: new Date().toISOString(), // 🔥 NUEVO: Para que la web sepa que es de HOY
-                estado: 'Pendiente'
-            };
-            //
-       
-            if (resultado.error) { alert('Error al vender: ' + resultado.error.message); return; }
-            
-            stockActual[tipoProducto] -= cantidad; if (esCambio) { stockVacias[tipoProducto] = (stockVacias[tipoProducto] || 0) + cantidad; }
-            actualizarUIStock(); alert('¡Venta registrada!');
-            
-            // Marcar que hubo venta en la geocerca actual para la hoja de ruta
-            if (ubicacionActual.clienteId && ubicacionActual.clienteId == clienteId) { ventaEnGeocerca = true; }
-
-            document.getElementById('ventaEsCambio').checked = false; document.getElementById('ventaCantidad').value = 1; document.getElementById('inputClienteNombre').value = ''; document.getElementById('inputClienteId').value = ''; calcularPrecioVenta();
-        }
-
-        // --- CAJA ---
-        async function actualizarCaja() { if (!repartidorActual) return; var query = supabase.from('ventas').select('total, modalidad_pago, es_cambio, cantidad, tipo_garrafa').eq('repartidor_id', repartidorActual.id).eq('estado', 'Pendiente'); if (ultimoCierreParcial) { query = query.gte('created_at', ultimoCierreParcial); } var ventasData = await query; if (ventasData.error || !ventasData.data) return; var totalEfectivo = 0, totalTransferencia = 0, totalTarjeta = 0, totalLocal = 0, envasesVacios = 0, totalGeneral = 0, productosEntregados = {}; for(var i=0; i<ventasData.data.length; i++){ var v = ventasData.data[i]; if(v.tipo_garrafa) { if(!productosEntregados[v.tipo_garrafa]) productosEntregados[v.tipo_garrafa] = 0; productosEntregados[v.tipo_garrafa] += v.cantidad; } if (v.es_cambio) { envasesVacios += v.cantidad; } else { totalGeneral += v.total; if (v.modalidad_pago === 'Efectivo') totalEfectivo += v.total; else if (v.modalidad_pago === 'Transferencia') totalTransferencia += v.total; else if (v.modalidad_pago === 'Tarjeta') totalTarjeta += v.total; else if (v.modalidad_pago === 'Pago en el local') totalLocal += v.total; } } document.getElementById('informeEfectivo').textContent = "$" + totalEfectivo.toLocaleString('es-UY'); document.getElementById('informeTransferencia').textContent = "$" + totalTransferencia.toLocaleString('es-UY'); document.getElementById('informeTarjeta').textContent = "$" + totalTarjeta.toLocaleString('es-UY'); document.getElementById('informeLocal').textContent = "$" + totalLocal.toLocaleString('es-UY'); document.getElementById('informeCambio').textContent = envasesVacios + " envases"; document.getElementById('informeTotalGeneral').textContent = "$" + totalGeneral.toLocaleString('es-UY'); document.getElementById('informeTotalEntregar').textContent = "$" + totalEfectivo.toLocaleString('es-UY'); var prodHTML = ""; for (var prod in productosEntregados) { prodHTML += `<div class="flex justify-between"><span>${prod}:</span> <span>${productosEntregados[prod]} uds</span></div>`; } document.getElementById('informeProductos').innerHTML = prodHTML || "<div class='text-gray-500'>Sin ventas aún</div>"; }
-        async function realizarCierreParcial() { if (!confirm('¿Registrar entrega de dinero en efectivo al administrador?')) return; var ventas = await supabase.from('ventas').select('id').eq('repartidor_id', repartidorActual.id).eq('estado', 'Pendiente'); if (!ventas.data || ventas.data.length === 0) { alert('No hay ventas pendientes.'); return; } var ids = ventas.data.map(function(v){ return v.id; }); var res = await supabase.from('ventas').update({ estado: 'Rendido' }).in('id', ids); if(res.error) { alert("Error al rendir"); return; } ultimoCierreParcial = new Date().toISOString(); alert('¡Dinero entregado!'); actualizarCaja(); }
-
-        // --- GPS, VOZ Y HOJA DE RUTA ---
-        function hablar(mensaje) { if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); var utterance = new SpeechSynthesisUtterance(mensaje); utterance.lang = 'es-UY'; utterance.rate = 1.0; window.speechSynthesis.speak(utterance); } }
-        function calcularDistancia(lat1, lon1, lat2, lon2) { var R = 6371e3; var dLat = (lat2 - lat1) * Math.PI / 180; var dLon = (lon2 - lon1) * Math.PI / 180; var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2); var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); return R * c; }
-        var notificadosHoy = []; 
-
-        function iniciarSeguimientoGPS() {
-            if (!navigator.geolocation) return; hablar("Jornada iniciada. Ruta activa.");
-            navigator.geolocation.watchPosition(function(position) {
-                var miLat = position.coords.latitude; var miLng = position.coords.longitude;
-                supabase.from('gps_locations').insert([{ device_id: repartidorActual.id, lat: miLat, lng: miLng, accuracy: position.coords.accuracy, speed: position.coords.speed || 0 }]).then();
-
-                      
-                
-                supabase.from('geocercas_clientes').select('id, cliente_id, radio_metros, latitud, longitud, clientes(nombre)').then(function(res) {
-                    if(res.data) {
-                        var estaEnGeocerca = false;
-                        for (var i = 0; i < res.data.length; i++) {
-                            var geo = res.data[i]; var distancia = calcularDistancia(miLat, miLng, geo.latitud, geo.longitud);
-                            if (distancia <= geo.radio_metros) {
-                                estaEnGeocerca = true;
-                                // Si acaba de llegar a una geocerca nueva
-                                if (ubicacionActual.geocercaId !== geo.id) {
-                                    ubicacionActual = { clienteId: geo.cliente_id, clienteNombre: geo.clientes ? geo.clientes.nombre : null, geocercaId: geo.id, lat: geo.latitud, lng: geo.longitud };
-                                    llegadaGeocerca = new Date(); // Hora de llegada
-                                    ventaEnGeocerca = false; // Resetear bandera de venta
-                                    if (!notificadosHoy.includes(geo.id)) { hablar("Atención. Estás cerca de " + ubicacionActual.clienteNombre); notificadosHoy.push(geo.id); setTimeout(function() { var index = notificadosHoy.indexOf(geo.id); if (index > -1) notificadosHoy.splice(index, 1); }, 600000); }
-                                }
-                                break;
-                            }
-                        }
-                        
-                        // Si salió de la geocerca
-                        if (!estaEnGeocerca && ubicacionActual.geocercaId !== null) {
-                            var salida = new Date();
-                            var duracionMs = salida - llegadaGeocerca;
-                            var duracionMin = Math.round(duracionMs / 60000);
-                            
-                            // Si se paró más de 3 minutos, registrar visita en la Hoja de Ruta (Invisible para el repartidor)
-                            if (duracionMin >= 3) {
-                                supabase.from('visitas_ruta').insert([{
-                                    repartidor_id: repartidorActual.id,
-                                    cliente_id: ubicacionActual.clienteId,
-                                    lat: ubicacionActual.lat,
-                                    lng: ubicacionActual.lng,
-                                    tiempo_llegada: llegadaGeocerca.toISOString(),
-                                    tiempo_salida: salida.toISOString(),
-                                    duracion_minutos: duracionMin,
-                                    venta_asociada: ventaEnGeocerca // True si confirmó venta ahí
-                                }]).then();
-                            }
-                            // Resetear ubicación
-                            ubicacionActual = { clienteId: null, clienteNombre: null, geocercaId: null };
-                            llegadaGeocerca = null;
-                            ventaEnGeocerca = false;
-                        }
-                    }
-                });
-            }, function(error) { console.error("Error GPS:", error); }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
-        }           
-    </script>
-</body>
-</html>
+            for (var tp in stockActual) { var vacias = stockVacias[tp] || 0; contenedor.innerHTML += `<div class="bg-white p-2 rounded-lg shadow text-center"><p class="font-black text-indigo-900 text-xs mb-1">${tp.replace('garrafa_', '')} kg</p><p class="text-green-700 font-black text-xl">${stockActual[tp]}</p><p class="text-green-500
