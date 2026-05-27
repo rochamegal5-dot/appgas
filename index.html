@@ -331,7 +331,8 @@
             navigator.geolocation.watchPosition(function(position) {
                 var miLat = position.coords.latitude; var miLng = position.coords.longitude;
                 supabase.from('gps_locations').insert([{ device_id: repartidorActual.id, lat: miLat, lng: miLng, accuracy: position.coords.accuracy, speed: position.coords.speed || 0 }]).then();
-                
+
+                      
                 
                 supabase.from('geocercas_clientes').select('id, cliente_id, radio_metros, latitud, longitud, clientes(nombre)').then(function(res) {
                     if(res.data) {
@@ -378,7 +379,7 @@
                     }
                 });
             }, function(error) { console.error("Error GPS:", error); }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
-        }
+        }           
     </script>
 </body>
 </html>
