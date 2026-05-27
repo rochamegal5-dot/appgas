@@ -296,16 +296,31 @@
 
         // --- VENTAS ---
         function calcularPrecioVenta() { var tipoProducto = document.getElementById('ventaTipoGarrafa').value; var inputCantidad = document.getElementById('ventaCantidad'); var cantidadRaw = parseInt(inputCantidad.value); var cantidadCalculo = isNaN(cantidadRaw) || cantidadRaw < 1 ? 1 : cantidadRaw; var esCambio = document.getElementById('ventaEsCambio').checked; var total = 0, precioBase = 0, flete = 0; if (esCambio) { total = 0; } else { var productoObj = PRODUCTOS_DB.find(function(p) { return p.tipo_producto === tipoProducto; }); if (productoObj) { precioBase = (productoObj.precio_venta_base || 0) * cantidadCalculo; flete = 0; total = precioBase + flete; } } document.getElementById('ventaTotalPantalla').textContent = "$" + total.toLocaleString('es-UY'); document.getElementById('ventaPrecioBaseOculto').value = precioBase; document.getElementById('ventaFleteOculto').value = flete; document.getElementById('ventaTotalOculto').value = total; }
-        function arreglarCantidad() { var inputCantidad = document.getElementById('ventaCantidad'); if (isNaN(parseInt(inputCantidad.value)) || parseInt(inputCantidad.value) < 1) { inputCantidad.value = 1; calcularPrecioVenta(); } }
-
+        function arreglarCantidad() { var inputCantidad = document.getElementById('ventaCantidad'); if (isNaN(parseInt(inputCantidad.value)) || parseInt(inputCantidad.value) < 1) { inputCantidad.value = 1; calcularPrecioVenta(); } 
+                                     
         async function registrarVenta() {
             var tipoProducto = document.getElementById('ventaTipoGarrafa').value; var cantidad = parseInt(document.getElementById('ventaCantidad').value); var esCambio = document.getElementById('ventaEsCambio').checked; var tipoCliente = document.getElementById('ventaTipoCliente').value; var esComercio = tipoCliente.toLowerCase().includes('comercio'); var clienteId = document.getElementById('inputClienteId').value;
             if (!tipoProducto) { alert("Selecciona un producto."); return; }
             if (esComercio && !clienteId) { alert("Seleccione un comercio válido de la lista."); return; }
             if (stockActual[tipoProducto] === undefined || cantidad > stockActual[tipoProducto]) { alert("No tienes suficiente stock."); return; }
 
-            var venta = { repartidor_id: repartidorActual.id, tipo_cliente: tipoCliente, cliente_id: clienteId ? parseInt(clienteId) : null, tipo_garrafa: tipoProducto, cantidad: cantidad, es_cambio: esCambio, precio_base: parseFloat(document.getElementById('ventaPrecioBaseOculto').value), flete: parseFloat(document.getElementById('ventaFleteOculto').value), total: parseFloat(document.getElementById('ventaTotalOculto').value), modalidad_pago: document.getElementById('ventaModalidad').value, estado: 'Pendiente' };
-            var resultado = await supabase.from('ventas').insert([venta]);
+                        var venta = {
+                repartidor_id: repartidorActual.id,
+                tipo_venta: 'reparto', // 🔥 NUEVO: Para que la web lo meta en Caja Repartidores
+                tipo_cliente: document.getElementById("ventaTipoCliente").value,
+                tipo_garrafa: tipoProducto,
+                cantidad: cantidad,
+                es_cambio: esCambio,
+                precio_base: parseFloat(document.getElementById("ventaPrecioBaseOculto").value),
+                flete: parseFloat(document.getElementById("ventaFleteOculto").value),
+                total: parseFloat(document.getElementById("ventaTotalOculto").value),
+                modalidad_pago: document.getElementById("ventaModalidad").value,
+                forma_pago: document.getElementById("ventaModalidad").value, // 🔥 NUEVO: La web usa este nombre
+                fecha: new Date().toISOString(), // 🔥 NUEVO: Para que la web sepa que es de HOY
+                estado: 'Pendiente'
+            };
+            //
+       
             if (resultado.error) { alert('Error al vender: ' + resultado.error.message); return; }
             
             stockActual[tipoProducto] -= cantidad; if (esCambio) { stockVacias[tipoProducto] = (stockVacias[tipoProducto] || 0) + cantidad; }
