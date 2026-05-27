@@ -330,7 +330,8 @@
             if (!navigator.geolocation) return; hablar("Jornada iniciada. Ruta activa.");
             navigator.geolocation.watchPosition(function(position) {
                 var miLat = position.coords.latitude; var miLng = position.coords.longitude;
-                supabase.from('gps_tracking').insert([{ repartidor_id: repartidorActual.id, lat: miLat, lng: miLng, precision: position.coords.accuracy }]).then();
+                supabase.from('gps_locations').insert([{ device_id: repartidorActual.id, lat: miLat, lng: miLng, accuracy: position.coords.accuracy, speed: position.coords.speed || 0 }]).then();
+                
                 
                 supabase.from('geocercas_clientes').select('id, cliente_id, radio_metros, latitud, longitud, clientes(nombre)').then(function(res) {
                     if(res.data) {
